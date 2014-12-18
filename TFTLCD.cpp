@@ -1,7 +1,5 @@
 #include "TFTLCD.h"
 
-
-
 #ifdef USE_ADAFRUIT_SHIELD_PINOUT
 // special defines for the dataport
  #define DATAPORT1 PORTD
@@ -532,6 +530,19 @@ void TFTLCD::fillScreen(uint16_t color) {
   //digitalWrite(_cs, HIGH);
 }
 
+void TFTLCD::setAddr(uint16_t x, uint16_t y) {
+  writeRegister(0x02,x>>8);
+  writeRegister(0x03,x);
+  writeRegister(0x04,x>>8);
+  writeRegister(0x05,x);
+  writeRegister(0x06,y>>8);
+  writeRegister(0x07,y);
+  writeRegister(0x08,y>>8);
+  writeRegister(0x09,y);
+  writeCommand(0x22);
+
+}
+
 void TFTLCD::drawPixel(uint16_t x, uint16_t y, uint16_t color)
 {
   // check rotation, move pixel around if necessary
@@ -558,10 +569,10 @@ void TFTLCD::drawPixel(uint16_t x, uint16_t y, uint16_t color)
     }
     
   if ((x >= TFTWIDTH) || (y >= TFTHEIGHT)) return;
-  writeRegister(TFTLCD_GRAM_HOR_AD, x); // GRAM Address Set (Horizontal Address) (R20h)
-  writeRegister(TFTLCD_GRAM_VER_AD, y); // GRAM Address Set (Vertical Address) (R21h)
-  writeCommand(TFTLCD_RW_GRAM);  // Write Data to GRAM (R22h)
+  writeCommand(0x02c); //write_memory_start
+  setAddr(x,y);
   writeData(color);
+
 }
 
 static const uint16_t _regValues[] PROGMEM = {
