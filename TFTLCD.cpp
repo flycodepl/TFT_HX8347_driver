@@ -247,7 +247,7 @@ void TFTLCD::fillRoundRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint1
 
 // fill a circle
 void TFTLCD::fillCircle(uint16_t x0, uint16_t y0, uint16_t r, uint16_t color) {
-  writeRegister(TFTLCD_ENTRY_MOD, 0x1030);
+  writeRegister(TFTLCD_WRITE_DIR, 0xC8);
   drawVerticalLine(x0, y0-r, 2*r+1, color);
   fillCircleHelper(x0, y0, r, 3, 0, color);
 }
@@ -359,85 +359,12 @@ void TFTLCD::drawHorizontalLine(uint16_t x, uint16_t y, uint16_t length, uint16_
 void TFTLCD::drawFastLine(uint16_t x, uint16_t y, uint16_t length, 
 			  uint16_t color, uint8_t rotflag)
 {
-  uint16_t newentrymod;
-  uint16_t prevEntryMod = readRegister(TFTLCD_ENTRY_MOD); // JW ADD
-  
-  switch (rotation) {
-  case 0:
-      x = X(x);
-      y = Y(y);
-    if (rotflag)
-#ifdef INVERT_Y
-      newentrymod = 0x1008;   // we want a 'vertical line' decrementing
-#else
-      newentrymod = 0x1028;   // we want a 'vertical line' incrementing
-#endif
-    else 
-#ifdef INVERT_X
-      newentrymod = 0x1020;   // we want a 'horizontal line' decrementing
-#else
-      newentrymod = 0x1030;   // we want a 'horizontal line' incrementing
-#endif
-    break;
-  case 1:
-    swap(x, y);
-    // first up fix the X
-    x = I_X(x);
-    y = Y(y);
-    if (rotflag)
-#ifdef INVERT_X
-      newentrymod = 0x1010;   // we want a 'horizontal line' incrementing
-#else
-      newentrymod = 0x1000;   // we want a 'horizontal line' decrementing
-#endif
-    else 
-#ifdef INVERT_Y
-      newentrymod = 0x1008;   // we want a 'vertical line' decrementing
-#else
-      newentrymod = 0x1028;   // we want a 'vertical line' incrementing
-#endif
-    break;
-  case 2:
-      x = I_X(x);
-      y = I_Y(y);
-    if (rotflag)
-#ifdef INVERT_Y
-      newentrymod = 0x1028;   // we want a 'vertical line' incrementing
-#else
-      newentrymod = 0x1008;   // we want a 'vertical line' decrementing
-#endif
-    else 
-#ifdef INVERT_X
-      newentrymod = 0x1030;   // we want a 'horizontal line' incrementing
-#else
-      newentrymod = 0x1020;   // we want a 'horizontal line' decrementing
-#endif
-    break;
-  case 3:
-    swap(x,y);
-    x = X(x);
-    y = I_Y(y);
-    if (rotflag)
-#ifdef INVERT_X
-      newentrymod = 0x1020;   // we want a 'horizontal line' decrementing
-#else
-      newentrymod = 0x1030;   // we want a 'horizontal line' incrementing
-#endif
-    else 
-#ifdef INVERT_Y
-      newentrymod = 0x1028;   // we want a 'vertical line' incrementing
-#else
-      newentrymod = 0x1008;   // we want a 'vertical line' decrementing
-#endif
-    break;
+  if (rotflag) {
+    setArea(x, y, 1, length);
+  } else {
+    setArea(x, y, length, 1);
   }
-  
-  writeRegister(TFTLCD_ENTRY_MOD, newentrymod);
-
-  writeRegister(TFTLCD_GRAM_HOR_AD, x); // GRAM Address Set (Horizontal Address) (R20h)
-  writeRegister(TFTLCD_GRAM_VER_AD, y); // GRAM Address Set (Vertical Address) (R21h)
-  writeCommand(TFTLCD_RW_GRAM);  // Write Data to GRAM (R22h)
-
+  writeCommand(0x22);
 
   *portOutputRegister(csport) &= ~cspin;
   //digitalWrite(_cs, LOW);
@@ -456,7 +383,6 @@ void TFTLCD::drawFastLine(uint16_t x, uint16_t y, uint16_t length,
   // set back to default
   *portOutputRegister(csport) |= cspin;
   //digitalWrite(_cs, HIGH);
-  writeRegister(TFTLCD_ENTRY_MOD, prevEntryMod); // JW ADD
 }
 
 
@@ -504,14 +430,12 @@ void TFTLCD::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
   }
 }
 
-
 void TFTLCD::fillScreen(uint16_t color) {
-  goHome();
-  uint32_t i;
-  
-  i = 320;
-  i *= 240;
-  
+  setMaxArea();
+  uint32_t screen_pixels = TFTLCD_BUFF_SIZE; //240x320
+
+  writeCommand(0x22);
+
   *portOutputRegister(csport) &= ~cspin;
   //digitalWrite(_cs, LOW);
   *portOutputRegister(cdport) |= cdpin;
@@ -522,7 +446,7 @@ void TFTLCD::fillScreen(uint16_t color) {
   //digitalWrite(_wr, HIGH);
 
   setWriteDir();
-  while (i--) {
+  while (screen_pixels--) {
     writeData_unsafe(color); 
   }
 
@@ -530,17 +454,33 @@ void TFTLCD::fillScreen(uint16_t color) {
   //digitalWrite(_cs, HIGH);
 }
 
-void TFTLCD::setAddr(uint16_t x, uint16_t y) {
-  writeRegister(0x02,x>>8);
-  writeRegister(0x03,x);
-  writeRegister(0x04,x>>8);
-  writeRegister(0x05,x);
-  writeRegister(0x06,y>>8);
-  writeRegister(0x07,y);
-  writeRegister(0x08,y>>8);
-  writeRegister(0x09,y);
-  writeCommand(0x22);
+void TFTLCD::fastSetAddr(uint16_t x, uint16_t y) {
+  writeRegister(0x02, x >> 8);
+  writeRegister(0x03, x);
 
+  writeRegister(0x06, y >> 8);
+  writeRegister(0x07, y);
+}
+
+void TFTLCD::setArea(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+
+  writeRegister(0x02, x >> 8);
+  writeRegister(0x03, x);
+
+  writeRegister(0x04, x+w-1 >> 8);
+  writeRegister(0x05, x+w-1);
+
+  writeRegister(0x06, y >> 8);
+  writeRegister(0x07, y);
+
+  writeRegister(0x08, y+h-1 >> 8);
+  writeRegister(0x09, y+h-1);
+
+  // writeCommand(0x22);
+}
+
+void TFTLCD::setMaxArea() {
+  setArea(0, 0, _width, _height);
 }
 
 void TFTLCD::drawPixel(uint16_t x, uint16_t y, uint16_t color)
@@ -570,20 +510,23 @@ void TFTLCD::drawPixel(uint16_t x, uint16_t y, uint16_t color)
     
   if ((x >= TFTWIDTH) || (y >= TFTHEIGHT)) return;
   writeCommand(0x02c); //write_memory_start
-  setAddr(x,y);
+  setArea(x,y, 1, 1);
+  writeCommand(0x22);
   writeData(color);
-
 }
 
 static const uint16_t _regValues[] PROGMEM = {
+  // gamma settings
   0x46,0x91,
   0x47,0x11,
   0x48,0x00,
   0x49,0x66,
+
   0x4a,0x37,
   0x4b,0x04,
   0x4c,0x11,
   0x4d,0x77,
+
   0x4e,0x00,
   0x4f,0x1f,
   0x50,0x0f,
@@ -601,6 +544,7 @@ static const uint16_t _regValues[] PROGMEM = {
 
     // Display Setting
   0x01,0x06, // IDMON=0, INVON=1, NORON=1, PTLON=0
+  0x17,0x60,
   0x16,0xC8, // MY=0, MX=0, MV=0, ML=1, BGR=0, TEON=0   0048
   0x23,0x95, // N_DC=1001 0101
   0x24,0x95, // PI_DC=1001 0101
@@ -613,6 +557,7 @@ static const uint16_t _regValues[] PROGMEM = {
   0x2C,0x02, // I_BP=0000 0010
   0x2d,0x02, // I_FP=0000 0010
 
+  0x31,0x01,
   0x3a,0x01, // N_RTN=0000, N_NW=001    0001
   0x3b,0x00, // P_RTN=0000, P_NW=001
   0x3c,0xf0, // I_RTN=1111, I_NW=000
@@ -626,7 +571,7 @@ static const uint16_t _regValues[] PROGMEM = {
 
   // Power Supply Setting
   0x19,0x49, // CADJ=0100, CUADJ=100, OSD_EN=1 ,60Hz
-  0x93,0x0F, // RADJ=1111, 100%
+  0x93,0x0C, // RADJ=1111, 100%
   0xFF,1,
   0x20,0x40, // BT=0100
   0x1D,0x07, // VC1=111   0007
@@ -635,7 +580,7 @@ static const uint16_t _regValues[] PROGMEM = {
 
   //VCOM SETTING
   0x44,0x4D, // VCM=101 0000  4D
-  0x45,0x0E, // VDV=1 0001   0011
+  0x45,0x11, // VDV=1 0001   0011
   0xFF,1,
   0x1C,0x04, // AP=100
   0xFF,2,
@@ -693,6 +638,7 @@ uint8_t TFTLCD::getRotation(void) {
 
 
 /********************************* low level pin initialization */
+
 
 TFTLCD::TFTLCD(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd, uint8_t reset) {
   _cs = cs;
@@ -754,77 +700,20 @@ void TFTLCD::reset(void) {
 }
 
 inline void TFTLCD::setWriteDir(void) {
-#if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega328) || (__AVR_ATmega8__)
   DATADDR2 |= DATA2_MASK;
   DATADDR1 |= DATA1_MASK;
-#elif defined(__AVR_ATmega1281__) || defined(__AVR_ATmega2561__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__) 
-
-  #ifdef USE_ADAFRUIT_SHIELD_PINOUT
-  DDRH |= 0x78;
-  DDRB |= 0xB0;
-  DDRG |= _BV(5);
-  #else
-  MEGA_DATADDR = 0xFF;
-  #endif
-#else
-  #error "No pins defined!"
-#endif
 }
 
 inline void TFTLCD::setReadDir(void) {
-#if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega328) || (__AVR_ATmega8__)
   DATADDR2 &= ~DATA2_MASK;
   DATADDR1 &= ~DATA1_MASK;
-#elif defined(__AVR_ATmega1281__) || defined(__AVR_ATmega2561__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__) 
-
-  #ifdef USE_ADAFRUIT_SHIELD_PINOUT
-  DDRH &= ~0x78;
-  DDRB &= ~0xB0;
-  DDRG &= ~_BV(5);
-  #else
-  MEGA_DATADDR = 0;
-  #endif
-#else
-  #error "No pins defined!"
-#endif
 }
 
 inline void TFTLCD::write8(uint8_t d) {
-#if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega328) || (__AVR_ATmega8__)
-
   DATAPORT2 = (DATAPORT2 & DATA1_MASK) | 
     (d & DATA2_MASK);
   DATAPORT1 = (DATAPORT1 & DATA2_MASK) | 
     (d & DATA1_MASK); // top 6 bits
-  
-#elif defined(__AVR_ATmega1281__) || defined(__AVR_ATmega2561__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__) 
-
-
-#ifdef USE_ADAFRUIT_SHIELD_PINOUT
-
-  // bit 6/7 (PH3 & 4)
-  // first two bits 0 & 1 (PH5 & 6)
-  PORTH &= ~(0x78);
-  PORTH |= ((d&0xC0) >> 3) | ((d&0x3) << 5);
-
-  // bits 2 & 3 (PB4 & PB5)
-  // bit 5 (PB7)
-  PORTB &= ~(0xB0); 
-  PORTB |= ((d & 0x2C) << 2);
-
-  // bit 4  (PG5)
-  if (d & _BV(4))
-    PORTG |= _BV(5);
-  else
-    PORTG &= ~_BV(5);
-
-  #else
-     MEGA_DATAPORT = d;  
-  #endif
-
-#else
-  #error "No pins defined!"
-#endif
 }
 
 inline uint8_t TFTLCD::read8(void) {
@@ -897,6 +786,7 @@ void TFTLCD::writeData(uint16_t data) {
   *portOutputRegister(csport) |= cspin;
   //digitalWrite(_cs, HIGH);
 }
+
 
 // this is a 'sped up' version, with no direction setting, or pin initialization
 // not for external usage, but it does speed up stuff like a screen fill
@@ -1004,9 +894,12 @@ void TFTLCD::writeRegister(uint16_t addr, uint16_t data) {
 
 void TFTLCD::goTo(uint16_t x, uint16_t y) {
   	calcGRAMPosition(&x, &y);
-	writeRegister(0x0020, x);     // GRAM Address Set (Horizontal Address) (R20h)
-  	writeRegister(0x0021, y);     // GRAM Address Set (Vertical Address) (R21h)	
-  	writeCommand(0x0022);            // Write Data to GRAM (R22h)
+	// writeRegister(0x0020, x);     // GRAM Address Set (Horizontal Address) (R20h)
+  	// writeRegister(0x0021, y);     // GRAM Address Set (Vertical Address) (R21h)
+  	// writeCommand(0x0022);            // Write Data to GRAM (R22h)
+        fastSetAddr(x,y);
+        writeCommand(0x22);
+
 }
 
 void TFTLCD::setDefaultViewport()
@@ -1096,29 +989,29 @@ void TFTLCD::calcGRAMPosition(uint16_t *posx, uint16_t *posy)
 
 void TFTLCD::setRotation(uint8_t x) {
 
-	x %= 4;  // cant be higher than 3
-	rotation = x;
-	switch (x) {
-	case 0:
-		writeRegister(TFTLCD_ENTRY_MOD, 0x1030);
-		_width = TFTWIDTH; 
-		_height = TFTHEIGHT;
-		break;
-	case 1:
-		writeRegister(TFTLCD_ENTRY_MOD, 0x1028);
-		_width = TFTHEIGHT; 
-		_height = TFTWIDTH;
-		break;
-	case 2:
-		writeRegister(TFTLCD_ENTRY_MOD, 0x1000);
-		_width = TFTWIDTH; 
-		_height = TFTHEIGHT;
-		break;
-	case 3:
-		 writeRegister(TFTLCD_ENTRY_MOD, 0x1018 );
-		_width = TFTHEIGHT; 
-		_height = TFTWIDTH;
-		break;
-	}
-	setDefaultViewport();
+  x %= 4;  // cant be higher than 3
+  rotation = x;
+  switch (x) {
+  case 0:
+    writeRegister(TFTLCD_WRITE_DIR, 0x08); // MY=0; MX=0; MV=0 (ML=0, BGR=1)
+    _width = TFTWIDTH;
+    _height = TFTHEIGHT;
+    break;
+  case 1:
+    writeRegister(TFTLCD_WRITE_DIR, 0x68); // MY=0; MX=0; MV=0 (ML=0, BGR=1)
+    _width = TFTHEIGHT;
+    _height = TFTWIDTH;
+    break;
+  case 2:
+    writeRegister(TFTLCD_WRITE_DIR, 0xC8); // MY=0; MX=0; MV=0 (ML=0, BGR=1)
+    _width = TFTWIDTH;
+    _height = TFTHEIGHT;
+    break;
+  case 3:
+    writeRegister(TFTLCD_WRITE_DIR, 0xA8); // MY=0; MX=0; MV=0 (ML=0, BGR=1)
+    _width = TFTHEIGHT;
+    _height = TFTWIDTH;
+    break;
+  }
+  setDefaultViewport();
 }

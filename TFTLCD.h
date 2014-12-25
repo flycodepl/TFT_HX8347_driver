@@ -10,7 +10,6 @@
 #define TFTLCD_START_OSC			0x00
 #define TFTLCD_DRIV_OUT_CTRL		0x01
 #define TFTLCD_DRIV_WAV_CTRL		0x02
-#define TFTLCD_ENTRY_MOD			0x03
 #define TFTLCD_RESIZE_CTRL			0x04
 #define TFTLCD_DISP_CTRL1			0x07
 #define TFTLCD_DISP_CTRL2			0x08
@@ -23,6 +22,7 @@
 #define TFTLCD_POW_CTRL2			0x11
 #define TFTLCD_POW_CTRL3			0x12
 #define TFTLCD_POW_CTRL4			0x13
+#define TFTLCD_WRITE_DIR                        0x16
 #define TFTLCD_GRAM_HOR_AD			0x20
 #define TFTLCD_GRAM_VER_AD			0x21
 #define TFTLCD_RW_GRAM				0x22
@@ -60,6 +60,8 @@
 
 #define TFTLCD_DELAYCMD                 0xFF
 
+#define TFTLCD_BUFF_SIZE 76800
+
 #define swap(a, b) { int16_t t = a; a = b; b = t; }
 
 class TFTLCD : public Print {
@@ -69,7 +71,6 @@ class TFTLCD : public Print {
   uint16_t Color565(uint8_t r, uint8_t g, uint8_t b);
 
   // drawing primitives!
-  void setAddr(uint16_t x, uint16_t y);
   void drawPixel(uint16_t x, uint16_t y, uint16_t color);
   void fillScreen(uint16_t color);
   void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color);
@@ -100,6 +101,10 @@ class TFTLCD : public Print {
 
   // commands
   void initDisplay(void);
+  void fastSetAddr(uint16_t x, uint16_t y);
+  void setArea(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+  void setMaxArea();
+  
   void goHome(void);
   void goTo(uint16_t x, uint16_t y);
 
