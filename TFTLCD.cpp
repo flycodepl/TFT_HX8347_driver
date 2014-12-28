@@ -517,20 +517,20 @@ void TFTLCD::drawPixel(uint16_t x, uint16_t y, uint16_t color)
 
 static const uint16_t _regValues[] PROGMEM = {
   // gamma settings
-  0x46,0x91,
-  0x47,0x11,
-  0x48,0x00,
-  0x49,0x66,
+  /* 0x46,0x91, */
+  /* 0x47,0x11, */
+  /* 0x48,0x00, */
+  /* 0x49,0x66, */
 
-  0x4a,0x37,
-  0x4b,0x04,
-  0x4c,0x11,
-  0x4d,0x77,
+  /* 0x4a,0x37, */
+  /* 0x4b,0x04, */
+  /* 0x4c,0x11, */
+  /* 0x4d,0x77, */
 
-  0x4e,0x00,
-  0x4f,0x1f,
-  0x50,0x0f,
-  0x51,0x00,
+  /* 0x4e,0x00, */
+  /* 0x4f,0x1f, */
+  /* 0x50,0x0f, */
+  /* 0x51,0x00, */
 
   //240x320 window setting
   0x02,0x00, // Column address start2
@@ -544,67 +544,78 @@ static const uint16_t _regValues[] PROGMEM = {
 
     // Display Setting
   0x01,0x06, // IDMON=0, INVON=1, NORON=1, PTLON=0
-  0x17,0x60,
-  0x16,0xC8, // MY=0, MX=0, MV=0, ML=1, BGR=0, TEON=0   0048
+  0x16,0xC8, // MY=1, MX=1, MV=0, ML=0, BGR=1 (p.131)
+  0x17,0x05, // IFPF=101 - 16Bit/Pixel (p.132)
+  0x18,0x49, /* I/PI_RADJ=0100 (idle mode - 60Mz)
+                N/P_RADJ=1001 (normal mode - 80Hz) (p. 133) */ // CHECK IT!!
+
   0x23,0x95, // N_DC=1001 0101
   0x24,0x95, // PI_DC=1001 0101
   0x25,0xFF, // I_DC=1111 1111
 
-  0x27,0x02, // N_BP=0000 0010
-  0x28,0x02, // N_FP=0000 0010
-  0x29,0x02, // PI_BP=0000 0010
-  0x2a,0x02, // PI_FP=0000 0010
-  0x2C,0x02, // I_BP=0000 0010
-  0x2d,0x02, // I_FP=0000 0010
+  // I don't know what it this ;)
+  /* 0x27,0x02, // N_BP=0000 0010 */
+  /* 0x28,0x02, // N_FP=0000 0010 */
+  /* 0x29,0x02, // PI_BP=0000 0010 */
+  /* 0x2a,0x02, // PI_FP=0000 0010 */
+  /* 0x2C,0x02, // I_BP=0000 0010 */
+  /* 0x2d,0x02, // I_FP=0000 0010 */
 
-  0x31,0x01,
-  0x3a,0x01, // N_RTN=0000, N_NW=001    0001
-  0x3b,0x00, // P_RTN=0000, P_NW=001
-  0x3c,0xf0, // I_RTN=1111, I_NW=000
-  0x3d,0x00, // DIV=00
-  0xFF,1,
-  0x35,0x38, // EQS=38h
-  0x36,0x78, // EQP=78h
-  0x3E,0x38, // SON=38h
-  0x40,0x0F, // GDON=0Fh
-  0x41,0xF0, // GDOFF
-
-  // Power Supply Setting
-  0x19,0x49, // CADJ=0100, CUADJ=100, OSD_EN=1 ,60Hz
-  0x93,0x0C, // RADJ=1111, 100%
-  0xFF,1,
-  0x20,0x40, // BT=0100
-  0x1D,0x07, // VC1=111   0007
-  0x1E,0x00, // VC3=000
-  0x1F,0x04, // VRH=0011
+  /* 0x31,0x01, */
+  /* 0x3a,0x01, // N_RTN=0000, N_NW=001    0001 */
+  /* 0x3b,0x00, // P_RTN=0000, P_NW=001 */
+  /* 0x3c,0xf0, // I_RTN=1111, I_NW=000 */
+  /* 0x3d,0x00, // DIV=00 */
+  /* 0xFF,1, */
+  /* 0x35,0x38, // EQS=38h */
+  /* 0x36,0x78, // EQP=78h */
+  /* 0x3E,0x38, // SON=38h */
+  /* 0x40,0x0F, // GDON=0Fh */
+  /* 0x41,0xF0, // GDOFF */
 
   //VCOM SETTING
-  0x44,0x4D, // VCM=101 0000  4D
-  0x45,0x11, // VDV=1 0001   0011
-  0xFF,1,
-  0x1C,0x04, // AP=100
-  0xFF,2,
+  /* 0x44,0x4D, // VCM=101 0000  4D */  // \
+  /* 0x45,0x11, // VDV=1 0001   0011 */ // / THIS IS GAMMA SETTINGS ??
+  //  0xFF,1,
 
-  0x1B,0x18, // GASENB=0, PON=0, DK=1, XDK=0, VLCD_TRI=0, STB=0
-  0xFF,1,
-  0x1B,0x10, // GASENB=0, PON=1, DK=0, XDK=0, VLCD_TRI=0, STB=0
-  0xFF,1,
-  0x43,0x80, //set VCOMG=1
-  0xFF,2,
+  /* =================================
+     = Power on setting flow (p.108) =
+     ================================= */
 
-  // Display ON Setting
-  0x90,0x7F, // SAP=0111 1111
-  0x26,0x04, //GON=0, DTE=0, D=01
-  0xFF,1,
-  0x26,0x24, //GON=1, DTE=0, D=01
-  0x26,0x2C, //GON=1, DTE=0, D=11
-  0xFF,1,
+  // Power control regisers
+  0x1A,0x02, // BT=0010 (p.134)
+  0x1B,0x1A, // VRH=0011 (p.135)
+  // VMF, VML and VMH ??
+
+  // I don't known that it this...
+  /* 0x1D,0x07, // VC1=111   0007 */
+  /* 0x1E,0x00, // VC3=000 */
+
+  0xFF, 5,
+  0x19, 0x01, // OSC_EN=1 (p.133)
+  0xFF, 5,
+
+
+  0x1C, 0x03, // AP=011 // quality vs current consumption (p.136)
+  0xFF, 5,
+  // (p.138)
+  0x1F, 0X88, // STB=0   -> GASEN=1, VCOMG=00, PON=0, DK=1, XDK=0, DVDH_TRI=0, STB=0
+  0xFF, 5,
+  0x1F, 0X80, // DK=0    -> GASEN=1, VCOMG=00, PON=0, DK=0, XDK=0, DVDH_TRI=0, STB=0
+  0xFF, 5,
+  0x1F, 0X90, // PON=1   -> GASEN=1, VCOMG=00, PON=1, DK=0, XDK=0, DVDH_TRI=0, STB=0
+  0xFF, 5,
+  0x1F, 0XD4, // VCOMG=1 -> GASEN=1, VCOMG=10, PON=1, DK=0, XDK=1, DVDH_TRI=0, STB=0
+  0xFF, 10,
+
+  // Display on flow (p.105)
+  /* 0x90,0x7F, // SAP=0111 1111 */ // ??????
+  0x28,0x38, // GON=1, DTE=1, D=10
+  0xFF,50,
+  0x28,0x3C, // GON=1, DTE=1, D=11
+
+  // I have no fucking idea WHY, but without this registers, display not alive :/
   0x26,0x3C, //GON=1, DTE=1, D=11
-
-  // INTERNAL REGISTER SETTING
-  0x57,0x02, // TEST_Mode=1: into TEST mode
-  0x95,0x01, // SET DISPLAY CLOCK AND PUMPING CLOCK TO SYNCHRONIZE
-  0x57,0x00, // TEST_Mode=0: exit TEST mode
   0x21,0x00
 };
 
@@ -685,12 +696,11 @@ TFTLCD::TFTLCD(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd, uint8_t reset) {
 
 /********************************** low level pin interface */
 
+// reset flow (power on/off setting up flow -  p. 108)
 void TFTLCD::reset(void) {
-  if (_reset)
-    digitalWrite(_reset, LOW);
+  digitalWrite(_reset, LOW);
   delay(2); 
-  if (_reset)
-    digitalWrite(_reset, HIGH);
+  digitalWrite(_reset, HIGH);
 
   // resync
   writeData(0);
